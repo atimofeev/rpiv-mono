@@ -7,6 +7,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Limit the model-visible `web_search` provider choices to configured providers, keep the active provider visible, and identify the default provider in the tool schema description.
+
 ## [2.12.0] - 2026-09-30
 
 ### Fixed

@@ -13,7 +13,7 @@ import askUserQuestionExtension from "@juicesharp/rpiv-ask-user-question";
 import { createMockPi, makeAssistantMessage, makeUserMessage } from "@juicesharp/rpiv-test-utils";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cappedTui, LaneConsole, showLaneConsole } from "./lane-console.js";
-import { renderLaneList } from "./lane-list.js";
+import { renderLaneList, SPIN_INTERVAL_MS, SPINNER_FRAMES } from "./lane-list.js";
 import type { ViewerMessage } from "./lane-transcript.js";
 import {
 	__resetRunLaneRegistry,
@@ -191,6 +191,29 @@ describe("LaneConsole — live output + bottom-pinned lane block", () => {
 		expect(out[out.length - 2]).toContain("↑/↓ lanes");
 		expect(out[out.length - 2]).toContain("←/esc back");
 		panel.dispose();
+	});
+
+	it("advances the running spinner on each timer tick and wraps after a full cycle", () => {
+		vi.useFakeTimers();
+		liveUnit();
+		const tui = makeTui();
+		const panel = new LaneConsole("run-1", SINGLE_UNIT_KEY, tui, identityTheme, {} as never, vi.fn(), vi.fn());
+		try {
+			const initialRow = panel.render(80).find((line) => line.includes("ship"));
+			expect(initialRow).toContain(SPINNER_FRAMES[0]);
+			vi.mocked(tui.requestRender).mockClear();
+			for (let tick = 1; tick <= SPINNER_FRAMES.length; tick++) {
+				vi.advanceTimersByTime(SPIN_INTERVAL_MS);
+				expect(tui.requestRender).toHaveBeenCalledTimes(tick);
+				expect(panel.render(80).find((line) => line.includes("ship"))).toContain(
+					SPINNER_FRAMES[tick % SPINNER_FRAMES.length],
+				);
+			}
+			expect(panel.render(80).find((line) => line.includes("ship"))).toBe(initialRow);
+		} finally {
+			panel.dispose();
+			vi.useRealTimers();
+		}
 	});
 
 	it("the bottom lane row is byte-for-byte the ambient dock row plus the ❯ cursor (static lanes)", () => {
